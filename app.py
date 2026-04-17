@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 st.set_page_config(page_title="APP Estadistica", layout="wide")
 st.title("Analisis Estadistico con IA")
@@ -38,5 +39,43 @@ outliers = st.radio("¿Observas outliers?", ("Sí", "No"), horizontal=True)
 
 st.divider()
 
+st.header("Prueba de Hipótesis (Prueba Z)")
 
+col1_h, col2_h, col3_h = st.columns(3)
+with col1_h:
+    h0_mean = st.number_input("Media Hipotética (H0)", value=float(datos_seleccionados.mean()))
+with col2_h:
+    tipo_prueba = st.selectbox("Tipo de Prueba", ["Bilateral", "Cola Izquierda", "Cola Derecha"])
+with col3_h:
+    alpha = st.selectbox("Nivel de Significancia (Alpha)", [0.01, 0.05, 0.10], index=1)
+
+
+media_muestral = datos_seleccionados.mean()
+n = len(datos_seleccionados)
+std_dev = datos_seleccionados.std() 
+error_estandar = std_dev / np.sqrt(n)
+z_stat = (media_muestral - h0_mean) / error_estandar
+
+
+if tipo_prueba == "Bilateral":
+    p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
+    z_critico = stats.norm.ppf(1 - alpha/2)
+elif tipo_prueba == "Cola Izquierda":
+    p_value = stats.norm.cdf(z_stat)
+    z_critico = stats.norm.ppf(alpha)
+else: 
+    p_value = 1 - stats.norm.cdf(z_stat)
+    z_critico = stats.norm.ppf(1 - alpha)
+
+rechazar_h0 = p_value < alpha
+
+
+col1, col2 = st.columns(2)
+col1.metric("Estadístico Z Calculado", f"{z_stat:.4f}")
+col2.metric("P-value", f"{p_value:.4f}")
+
+if rechazar_h0:
+    st.error("Decisión: Se RECHAZA la Hipótesis Nula (H0)")
+else:
+    st.success("Decisión: NO se rechaza la Hipótesis Nula (H0)")
 
