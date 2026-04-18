@@ -12,12 +12,7 @@ st.title("Analisis Estadistico con IA")
 st.sidebar.header("1. Carga de Datos")
 uploaded_file = st.sidebar.file_uploader("Sube tu archivo CSV", type=["csv"])
 
-st.sidebar.header("2. Parámetros de la Prueba")
-h0_mean = st.sidebar.number_input("Media Hipotética (H0)", value=50.0)
-alpha = st.sidebar.selectbox("Nivel de Significancia (α)", [0.01, 0.05, 0.10], index=1)
-tipo_prueba = st.sidebar.selectbox("Tipo de Prueba", ["Bilateral", "Cola Izquierda", "Cola Derecha"])
-
-st.sidebar.header("3. Asistente de IA")
+st.sidebar.header("2. Asistente de IA")
 api_key = st.sidebar.text_input("Ingresa tu API Key de Gemini", type="password")
 
 if uploaded_file is not None:
@@ -33,7 +28,7 @@ else:
 st.divider()
 
 st.header("Visualización de Distribuciones")
-fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+fig, axes = plt.subplots(2, 1, figsize=(12, 10))
 
 sns.histplot(datos_seleccionados, kde=True, ax=axes[0], color="skyblue")
 axes[0].set_title("Histograma y KDE")
@@ -44,8 +39,30 @@ axes[1].set_title("Boxplot (Detección de Outliers)")
 st.pyplot(fig)
 st.subheader("Análisis de la Distribución")
 normal = st.radio("¿La distribución parece normal?", ("Sí", "No"), horizontal=True)
-sesgo = st.radio("¿Hay sesgo?", ("Sin sesgo evidente", "Sesgo Positivo (derecha)", "Sesgo Negativo (izquierda)"))
+sesgo = st.radio("¿Hay sesgo?", ("Sin sesgo evidente", "Sesgo Positivo (derecha)", "Sesgo Negativo (izquierda)"), horizontal=True)
 outliers = st.radio("¿Observas outliers?", ("Sí", "No"), horizontal=True)
+
+with st.expander("Verificar respuestas matemáticamente"):
+    valor_sesgo = datos_seleccionados.skew()
+    if valor_sesgo > 0.5:
+        texto_sesgo = f"Sesgo Positivo (Cola a la derecha) con valor de {valor_sesgo:.2f}"
+    elif valor_sesgo < -0.5:
+        texto_sesgo = f"Sesgo Negativo (Cola a la izquierda) con valor de {valor_sesgo:.2f}"
+    else:
+        texto_sesgo = f"Aproximadamente Simétrica (Sin sesgo evidente) con valor de {valor_sesgo:.2f}"
+        
+    Q1 = datos_seleccionados.quantile(0.25)
+    Q3 = datos_seleccionados.quantile(0.75)
+    IQR = Q3 - Q1
+    limite_inferior = Q1 - 1.5 * IQR
+    limite_superior = Q3 + 1.5 * IQR
+    cantidad_outliers = ((datos_seleccionados < limite_inferior) | (datos_seleccionados > limite_superior)).sum()
+    
+    st.write(f"- **Diagnóstico de Sesgo:** La computadora detecta que es una distribución **{texto_sesgo}**.")
+    if cantidad_outliers > 0:
+        st.write(f"- **Diagnóstico de Outliers:** Se detectaron matemáticamente **{cantidad_outliers}** datos atípicos (outliers).")
+    else:
+        st.write("- **Diagnóstico de Outliers:** No se detectaron datos atípicos.")
 
 st.divider()
 
