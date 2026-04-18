@@ -1,17 +1,27 @@
 import streamlit as st
 import pandas as pd
-import numpy as np 
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as stats
+import google.generativeai as genai
 
 st.set_page_config(page_title="APP Estadistica", layout="wide")
 st.title("Analisis Estadistico con IA")
-st.sidebar.header("1. Carga de Datos")
-upload_file = st.sidebar.file_uploader("Sube un archivo CSV", type=["csv"])
 
-if upload_file is not None:
-    df = pd.read_csv(upload_file)
+st.sidebar.header("1. Carga de Datos")
+uploaded_file = st.sidebar.file_uploader("Sube tu archivo CSV", type=["csv"])
+
+st.sidebar.header("2. Parámetros de la Prueba")
+h0_mean = st.sidebar.number_input("Media Hipotética (H0)", value=50.0)
+alpha = st.sidebar.selectbox("Nivel de Significancia (α)", [0.01, 0.05, 0.10], index=1)
+tipo_prueba = st.sidebar.selectbox("Tipo de Prueba", ["Bilateral", "Cola Izquierda", "Cola Derecha"])
+
+st.sidebar.header("3. Asistente de IA")
+api_key = st.sidebar.text_input("Ingresa tu API Key de Gemini", type="password")
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
     st.write("Vista previa de los datos: ", df.head())
     variables = df.columns.tolist()
     var_objetivo = st.sidebar.selectbox("Selecciona la variable a analizar", variables)
@@ -79,3 +89,31 @@ if rechazar_h0:
 else:
     st.success("Decisión: NO se rechaza la Hipótesis Nula (H0)")
 
+st.header("Asistente de Inteligencia Artificial")
+
+if st.button("Analizar resultados con IA"):
+    if api_key:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        prompt = f"""
+        Actúa como un experto en estadística. Se realizó una prueba Z con los siguientes parámetros:
+        - Media de la muestra = {media_muestral:.2f}
+        - Media bajo H0 = {h0_mean}
+        - Nivel de significancia (Alfa) = {alpha}
+        - Tipo de prueba = {tipo_prueba}
+        - Valor Z calculado = {z_stat:.2f}
+        - P-value calculado = {p_value:.4f}
+        
+        ¿Se rechaza H0? Explica la decisión basándote estrictamente en la evidencia estadística. 
+        Mantén la respuesta concisa, profesional.
+        """
+        
+        with st.spinner("Gemini está analizando los datos..."):
+            try:
+                respuesta = model.generate_content(prompt)
+                st.info(respuesta.text)
+            except Exception as e:
+                st.error(f"Error de conexión con la API: {e}")
+    else:
+        st.warning("Por favor, ingresa tu API Key en la barra lateral para usar el asistente.")
